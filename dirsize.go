@@ -21,10 +21,12 @@ func main() {
 	var err error
 
 	dirToSize := flag.String("d", "", "Path you wish to return the size of.")
+	verbose := flag.Bool("v", false, "Output verbode directory size details.")
 	flag.Parse()
 
 	searchDir := *dirToSize
-	// fmt.Println(searchDir)
+	verboseOutput := *verbose
+
 	if searchDir == "" {
 		// Quit out the program
 		flag.PrintDefaults()
@@ -35,7 +37,7 @@ func main() {
 		fmt.Println("The supplied directory does not exist.")
 		fmt.Printf("Directory entered: %s", searchDir)
 	} else {
-		size, fileCount, err = DirSize(searchDir)
+		size, fileCount, err = DirSize(searchDir, verboseOutput)
 		if err != nil {
 			fmt.Println(err)
 		} else {
@@ -54,18 +56,36 @@ func DirExists(path string) (bool) {
 	}
 }
 
-func DirSize(path string) (int64, int64, error) {
-    var size int64
-    var fcount int64
+func DirSize(path string, opt bool) (int64, int64, error) {
+    var totalSize int64
+    var dirSize int64
+    var fileCount int64
+    m := make(map[string]int64)	// map to store directory sizes in
+    var dirName string
 
-    err := filepath.Walk(path, func(_ string, info os.FileInfo, err error) error {
+    err := filepath.Walk(path, func(p string, info os.FileInfo, err error) error {
         if !info.IsDir() {
-            size += info.Size()
-            fcount += 1
+            totalSize += info.Size()
+            fileCount += 1
+            dirSize += info.Size()
+            m[dirName] += dirSize
+        } else {
+        	dirName = p
+        	_, ok := m[p]
+    		if  ok == false {
+    			m[p] = 0
+    		} 
         }
+        dirSize = 0
         return err
     })
-    return size, fcount, err
+
+    if opt {
+    	for key, value := range m {
+    		fmt.Printf("Dir: %s \t Size: %d Bytes \n", key, value)
+		}
+    }
+    return totalSize, fileCount, err
 }
 
 func outputStats(bytes int64, fcount int64) {
